@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shop}
+      POSTGRES_DB: shopbot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://shop:${DB_PASSWORD:-shop}@db:5432/shopbot
+    depends_on: [db]
+    restart: unless-stopped
+volumes:
+  pgdata:
