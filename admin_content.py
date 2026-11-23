@@ -96,8 +96,8 @@ async def msgs(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     await cb.answer()
     rows = [[A(label, f"m:{key}")] for key, label in texts.MESSAGE_KEYS.items()]
-    rows += [VARS_BTN, [A("🏠 Админ-панель", "home")]]
-    await show_text(cb, "📝 СООБЩЕНИЯ\nВыберите сообщение для редактирования:", rows)
+    rows += [[A("🔘 Тексты кнопок", "lb")], VARS_BTN, [A("🏠 Админ-панель", "home")]]
+    await show_text(cb, "📝 СООБЩЕНИЯ\nВыберите сообщение (шаблон, меню или страницу раздела) для редактирования:", rows)
 
 
 @router.callback_query(F.data.startswith("a:m:"))
@@ -264,3 +264,98 @@ async def bd_go(cb: CallbackQuery, state: FSMContext, user):
     await db.log(user["id"], "broadcast_start")
     await cb.answer("🚀")
     await show_text(cb, "🚀 Рассылка запущена. По завершении я пришлю отчёт.", [[A("🏠 Админ-панель", "home")]])
+
+
+# ───────────────────────── тексты кнопок (только надпись) ─────────────────────────
+import re  # noqa: E402
+
+
+class BL(StatesGroup):
+    value = State()
+
+
+LANG_NAMES = {"all": "🌐 Все языки", **{k: v for k, v in texts.LANGS.items()}}
+
+
+def _label_keys():
+    return {k for _, keys in texts.BUTTON_SECTIONS for k in keys}
+
+
+@router.callback_query(F.data == "a:lb")
+async def lb_sections(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.answer()
+    rows = [[A(name, f"lbs:{i}")] for i, (name, _) in enumerate(texts.BUTTON_SECTIONS)]
+    rows.append([A("⬅️ Назад", "msgs")])
+    await show_text(cb, "🔘 ТЕКСТЫ КНОПОК\nВыберите раздел. Меняется только надпись на кнопке — действие остаётся прежним.", rows)
+
+
+@router.callback_query(F.data.startswith("a:lbs:"))
+async def lb_section(cb: CallbackQuery):
+    await cb.answer()
+    i = int(cb.data.split(":")[2])
+    name, keys = texts.BUTTON_SECTIONS[i]
+    rows = []
+    for k in keys:
+        changed = any((k, lg) in texts.OVERRIDES for lg in ("all", "ru", "uk", "en"))
+        rows.append([A(("✏️ " if changed else "") + texts.t("ru", k), f"lbk:{k}")])
+    rows.append([A("⬅️ Назад", "lb")])
+    await show_text(cb, f"{name}\nВыберите кнопку (✏️ — текст уже изменён):", rows)
+
+
+@router.callback_query(F.data.startswith("a:lbk:"))
+async def lb_key(cb: CallbackQuery):
+    key = cb.data.split(":")[2]
+    if key not in _label_keys():
+        return await cb.answer()
+    await cb.answer()
+    lines = [f"Стандартно (RU): {texts.L['ru'][key]}", ""]
+    for lg in ("all", "ru", "uk", "en"):
+        v = texts.OVERRIDES.get((key, lg))
+        lines.append(f"{LANG_NAMES[lg]}: {v if v else '—'}")
+    lines.append("\nПриоритет: текст для конкретного языка важнее «Все языки».")
+    rows = [[A(name, f"lbl:{key}:{lg}")] for lg, name in LANG_NAMES.items()] + [[A("⬅️ Назад", "lb")]]
+    await show_text(cb, "Для какого языка менять текст?\n\n" + "\n".join(lines), rows)
+
+
+@router.callback_query(F.data.startswith("a:lbl:"))
+async def lb_edit(cb: CallbackQuery, state: FSMContext):
+    _, _, key, lg = cb.data.split(":")
+    if key not in _label_keys() or lg not in LANG_NAMES:
+        return await cb.answer()
+    await cb.answer()
+    await state.set_state(BL.value)
+    await state.update_data(key=key, lg=lg)
+    ph = sorted(set(re.findall(r"\{(\w+)\}", texts.L["ru"][key])))
+    ph_note = f"\nМожно использовать: {', '.join('{' + p + '}' for p in ph)}" if ph else ""
+    await show_text(cb, f"Отправьте новый текст кнопки ({LANG_NAMES[lg]}), до 40 символов.{ph_note}\n"
+                        "Обычные emoji можно, Premium Emoji в кнопках Telegram не поддерживает.",
+                    [[A("♻️ Сбросить", f"lbr:{key}:{lg}")], [A("❌ Отмена", f"lbk:{key}")]])
+
+
+@router.message(BL.value)
+async def lb_value(m: Message, state: FSMContext, user):
+    d = await state.get_data()
+    key, lg = d["key"], d["lg"]
+    v = (m.text or "").strip()
+    if not v or len(v) > 40:
+        return await m.answer("Текст кнопки: от 1 до 40 символов.")
+    allowed = set(re.findall(r"\{(\w+)\}", texts.L["ru"][key]))
+    bad = set(re.findall(r"\{(\w+)\}", v)) - allowed
+    if bad:
+        return await m.answer("Недопустимые переменные: " + ", ".join(sorted(bad)))
+    await db.set_label(key, lg, v)
+    await db.log(user["id"], "button_label", key=key, lang=lg)
+    await state.clear()
+    await show_text(m, f"✅ Сохранено: {v}", [[A("🔘 Тексты кнопок", "lb")], [A("🏠 Админ-панель", "home")]])
+
+
+@router.callback_query(F.data.startswith("a:lbr:"))
+async def lb_reset(cb: CallbackQuery, state: FSMContext, user):
+    _, _, key, lg = cb.data.split(":")
+    if key in _label_keys() and lg in LANG_NAMES:
+        await db.reset_label(key, lg)
+        await db.log(user["id"], "button_label_reset", key=key, lang=lg)
+    await state.clear()
+    await cb.answer("♻️ Сброшено")
+    await show_text(cb, "♻️ Текст кнопки сброшен к стандартному.", [[A("🔘 Тексты кнопок", "lb")]])

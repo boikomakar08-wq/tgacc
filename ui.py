@@ -91,7 +91,8 @@ async def sample_vars(user) -> dict:
          "price": 450, "category_name": "Telegram", "data": "Логин: +380000000000\nПароль: example"}
     pur = {"id": 1234, "created_at": datetime.datetime.now(datetime.timezone.utc), "price": 450,
            "product_title": p["title"], "product_data": p["data"]}
-    return await build_vars(user, p, pur, error="Пример текста ошибки", ticket_id=77, amount=100)
+    return await build_vars(user, p, pur, error="Пример текста ошибки", ticket_id=77, amount=100,
+                             state="🔔 включены")
 
 
 async def get_msg(key: str, lang: str) -> dict:

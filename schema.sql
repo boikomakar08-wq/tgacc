@@ -139,6 +139,13 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS button_labels (
+    key  TEXT NOT NULL,
+    lang TEXT NOT NULL,            -- ru | uk | en | all
+    text TEXT NOT NULL,
+    PRIMARY KEY (key, lang)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

@@ -82,6 +82,23 @@ async def reset_message(key):
     await pool.execute("DELETE FROM messages WHERE key=$1", key)
 
 
+async def refresh_labels():
+    import texts
+    rows = await pool.fetch("SELECT key,lang,text FROM button_labels")
+    texts.OVERRIDES.clear()
+    texts.OVERRIDES.update({(r["key"], r["lang"]): r["text"] for r in rows})
+
+
+async def set_label(key, lang, text):
+    await pool.execute("INSERT INTO button_labels(key,lang,text) VALUES($1,$2,$3) ON CONFLICT(key,lang) DO UPDATE SET text=$3", key, lang, text)
+    await refresh_labels()
+
+
+async def reset_label(key, lang):
+    await pool.execute("DELETE FROM button_labels WHERE key=$1 AND lang=$2", key, lang)
+    await refresh_labels()
+
+
 async def log(admin_id: int, action: str, **details):
     await pool.execute("INSERT INTO admin_logs(admin_id,action,details) VALUES($1,$2,$3)", admin_id, action, details)
 

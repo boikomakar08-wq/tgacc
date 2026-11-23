@@ -44,6 +44,7 @@ async def cleanup_loop():
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     await db.init()
+    await db.refresh_labels()
     bot = Bot(config.BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     dp.message.outer_middleware(UserMiddleware())

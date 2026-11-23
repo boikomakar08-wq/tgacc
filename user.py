@@ -156,7 +156,7 @@ async def favs(cb: CallbackQuery, user, lang):
             rows.append([btn(f"🚫 {p['title'][:40]} ({t(lang, 'sold_label')})", f"fr:{p['id']}")])
     rows += nav("favs", page, pages)
     rows.append([btn(t(lang, "btn_back"), "menu")])
-    await show_text(cb, t(lang, "favs_title"), rows)
+    await show(cb, "favs_title", lang, await ui.build_vars(user), rows)
 
 
 @router.callback_query(F.data.startswith("fr:"))
@@ -239,7 +239,7 @@ async def my_purchases(cb: CallbackQuery, user, lang):
         rows.append([btn(label, f"pv:{p['id']}")])
     rows += nav("mybuys", page, pages)
     rows.append([btn(t(lang, "btn_back"), "menu")])
-    await show_text(cb, t(lang, "purchases_title"), rows)
+    await show(cb, "purchases_title", lang, await ui.build_vars(user), rows)
 
 
 async def _own_purchase(cb, user, pid):
@@ -262,7 +262,7 @@ async def purchase_card(cb: CallbackQuery, user, lang):
         [btn(t(lang, "btn_back"), "mybuys:0")],
     ]
     v = await ui.build_vars(user, purchase=pur)
-    await show_text(cb, t(lang, "purchase_card"), rows, v)
+    await show(cb, "purchase_card", lang, v, rows)
 
 
 @router.callback_query(F.data.startswith("pd:"))
@@ -303,7 +303,7 @@ async def balance(cb: CallbackQuery, user, lang):
         [btn(t(lang, "btn_history"), "mybuys:0")],
         [btn(t(lang, "btn_back"), "menu")],
     ]
-    await show_text(cb, t(lang, "balance_page"), rows, await ui.build_vars(user))
+    await show(cb, "balance_page", lang, await ui.build_vars(user), rows)
 
 
 @router.callback_query(F.data == "topup")
@@ -397,7 +397,7 @@ async def _notif_page(cb, user, lang):
     rows = [[btn(("✅ " if on else "") + t(lang, "btn_notif_on"), "notif_t:1"),
              btn(("✅ " if not on else "") + t(lang, "btn_notif_off"), "notif_t:0")],
             [btn(t(lang, "btn_back"), "menu")]]
-    await show_text(cb, t(lang, "notif_page", state=t(lang, "state_on" if on else "state_off")), rows)
+    await show(cb, "notif_page", lang, await ui.build_vars(user, state=t(lang, "state_on" if on else "state_off")), rows)
 
 
 @router.callback_query(F.data == "notif")

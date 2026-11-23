@@ -227,6 +227,38 @@ L = {
 }
 
 
+# Переопределения текстов кнопок из админки: (ключ, язык|'all') -> текст
+OVERRIDES: dict = {}
+
+# Разделы для редактирования надписей кнопок (только текст, действие кнопки не меняется)
+BUTTON_SECTIONS = [
+    ("🏠 Главное меню", ["btn_catalog", "btn_purchases", "btn_topup", "btn_balance", "btn_favs", "btn_notif", "btn_lang", "btn_support"]),
+    ("📦 Карточка товара", ["btn_buy", "btn_fav_add", "btn_fav_del", "btn_back"]),
+    ("💳 Оплата", ["btn_pay_stars", "btn_pay_balance", "btn_cancel"]),
+    ("🎉 Покупка и «Мои покупки»", ["btn_show_data", "btn_problem", "btn_to_catalog", "btn_goto_catalog", "btn_support"]),
+    ("💰 Баланс и пополнение", ["btn_topup_short", "btn_history", "btn_custom", "btn_topup_pay", "btn_promo"]),
+    ("🔔 Уведомления и новые товары", ["btn_notif_on", "btn_notif_off", "btn_view_product", "btn_menu"]),
+]
+
+
 def t(lang: str, key: str, **kw) -> str:
-    s = L.get(lang, L["ru"]).get(key) or L["ru"][key]
+    s = None
+    if key.startswith("btn_"):
+        s = OVERRIDES.get((key, lang)) or OVERRIDES.get((key, "all"))
+    s = s or L.get(lang, L["ru"]).get(key) or L["ru"][key]
     return tpl.render_plain(s, kw) if kw else s
+
+
+# Страницы разделов тоже редактируются как шаблоны (текст, фото, GIF, Premium Emoji, переменные)
+_SECTION_KEYS = ("purchases_title", "purchase_card", "balance_page", "favs_title", "notif_page")
+for _lang in DEFAULTS:
+    for _k in _SECTION_KEYS:
+        DEFAULTS[_lang][_k] = L[_lang][_k]
+MESSAGE_KEYS.update({
+    "balance_page": "💰 Страница баланса",
+    "purchases_title": "📦 Список «Мои покупки»",
+    "purchase_card": "🧾 Карточка покупки",
+    "favs_title": "❤️ Избранное",
+    "notif_page": "🔔 Страница уведомлений",
+})
+VARIABLES["Служебные"]["state"] = "Состояние уведомлений (страница уведомлений)"
