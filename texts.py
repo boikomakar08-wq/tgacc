@@ -108,7 +108,9 @@ L = {
         "btn_catalog": "🛍️ Каталог", "btn_purchases": "📦 Мои покупки", "btn_topup": "⭐ Пополнить баланс",
         "btn_balance": "💰 Мой баланс", "btn_favs": "❤️ Избранное", "btn_notif": "🔔 Уведомления",
         "btn_lang": "🌐 Язык", "btn_support": "🎫 Поддержка", "btn_promo": "🎁 Промокод",
-        "btn_back": "⬅️ Назад", "btn_menu": "🏠 Меню", "btn_buy": "🛒 Купить",
+        "btn_back": "⬅️ Назад", "btn_menu": "🏠 Меню",
+        "btn_welcome_ru": "🇷🇺 Русский", "btn_welcome_uk": "🇺🇦 Українська", "btn_welcome_en": "🇬🇧 English",
+        "btn_open_menu": "🏠 Открыть главное меню", "btn_buy": "🛒 Купить",
         "btn_fav_add": "❤️ В избранное", "btn_fav_del": "💔 Убрать из избранного", "btn_cancel": "❌ Отмена",
         "btn_pay_stars": "✅ Купить за ⭐{price}", "btn_pay_balance": "💰 Оплатить с баланса (⭐{balance})",
         "btn_show_data": "📋 Показать данные", "btn_problem": "🆘 Проблема с покупкой",
@@ -148,7 +150,9 @@ L = {
         "btn_catalog": "🛍️ Каталог", "btn_purchases": "📦 Мої покупки", "btn_topup": "⭐ Поповнити баланс",
         "btn_balance": "💰 Мій баланс", "btn_favs": "❤️ Обране", "btn_notif": "🔔 Сповіщення",
         "btn_lang": "🌐 Мова", "btn_support": "🎫 Підтримка", "btn_promo": "🎁 Промокод",
-        "btn_back": "⬅️ Назад", "btn_menu": "🏠 Меню", "btn_buy": "🛒 Купити",
+        "btn_back": "⬅️ Назад", "btn_menu": "🏠 Меню",
+        "btn_welcome_ru": "🇷🇺 Російська", "btn_welcome_uk": "🇺🇦 Українська", "btn_welcome_en": "🇬🇧 English",
+        "btn_open_menu": "🏠 Відкрити головне меню", "btn_buy": "🛒 Купити",
         "btn_fav_add": "❤️ В обране", "btn_fav_del": "💔 Прибрати з обраного", "btn_cancel": "❌ Скасувати",
         "btn_pay_stars": "✅ Купити за ⭐{price}", "btn_pay_balance": "💰 Сплатити з балансу (⭐{balance})",
         "btn_show_data": "📋 Показати дані", "btn_problem": "🆘 Проблема з покупкою",
@@ -188,6 +192,8 @@ L = {
         "btn_catalog": "🛍️ Catalog", "btn_purchases": "📦 My purchases", "btn_topup": "⭐ Top up balance",
         "btn_balance": "💰 My balance", "btn_favs": "❤️ Favorites", "btn_notif": "🔔 Notifications",
         "btn_lang": "🌐 Language", "btn_support": "🎫 Support", "btn_promo": "🎁 Promo code",
+        "btn_welcome_ru": "🇷🇺 Russian", "btn_welcome_uk": "🇺🇦 Ukrainian", "btn_welcome_en": "🇬🇧 English",
+        "btn_open_menu": "🏠 Open main menu",
         "btn_back": "⬅️ Back", "btn_menu": "🏠 Menu", "btn_buy": "🛒 Buy",
         "btn_fav_add": "❤️ Add to favorites", "btn_fav_del": "💔 Remove from favorites", "btn_cancel": "❌ Cancel",
         "btn_pay_stars": "✅ Buy for ⭐{price}", "btn_pay_balance": "💰 Pay from balance (⭐{balance})",
@@ -232,7 +238,7 @@ OVERRIDES: dict = {}
 
 # Разделы для редактирования надписей кнопок (только текст, действие кнопки не меняется)
 BUTTON_SECTIONS = [
-    ("🏠 Главное меню", ["btn_catalog", "btn_purchases", "btn_topup", "btn_balance", "btn_favs", "btn_notif", "btn_lang", "btn_support"]),
+    ("🏠 Главное меню", ["btn_catalog", "btn_purchases", "btn_topup", "btn_balance", "btn_favs", "btn_notif", "btn_lang", "btn_support", "btn_open_menu", "btn_welcome_ru", "btn_welcome_uk", "btn_welcome_en"]),
     ("📦 Карточка товара", ["btn_buy", "btn_fav_add", "btn_fav_del", "btn_back"]),
     ("💳 Оплата", ["btn_pay_stars", "btn_pay_balance", "btn_cancel"]),
     ("🎉 Покупка и «Мои покупки»", ["btn_show_data", "btn_problem", "btn_to_catalog", "btn_goto_catalog", "btn_support"]),
@@ -245,7 +251,7 @@ def t(lang: str, key: str, **kw) -> str:
     s = None
     if key.startswith("btn_"):
         s = OVERRIDES.get((key, lang)) or OVERRIDES.get((key, "all"))
-    s = s or L.get(lang, L["ru"]).get(key) or L["ru"][key]
+    s = s or L.get(lang, L["en"]).get(key) or L["en"][key]
     return tpl.render_plain(s, kw) if kw else s
 
 

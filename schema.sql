@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     username         TEXT,
     first_name       TEXT,
     last_name        TEXT,
-    lang             TEXT    NOT NULL DEFAULT 'ru',
+    lang             TEXT    NOT NULL DEFAULT 'en',
     balance          BIGINT  NOT NULL DEFAULT 0 CHECK (balance >= 0),
     total_deposited  BIGINT  NOT NULL DEFAULT 0,
     total_spent      BIGINT  NOT NULL DEFAULT 0,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS promo_uses (
 
 CREATE TABLE IF NOT EXISTS messages (
     key        TEXT NOT NULL,
-    lang       TEXT NOT NULL DEFAULT 'ru',
+    lang       TEXT NOT NULL DEFAULT 'en',
     text       TEXT,
     entities   JSONB,
     photo_id   TEXT,

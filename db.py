@@ -117,8 +117,9 @@ async def log(admin_id: int, action: str, **details):
 
 # ───────────────────────── пользователи ─────────────────────────
 async def upsert_user(tu) -> tuple[dict, bool]:
-    code = (tu.language_code or "ru")[:2]
-    detected_lang = code if code in ("ru", "uk", "en") else "ru"
+    code = (tu.language_code or "en")[:2]
+    # New users always start in English; language is selected explicitly on the welcome screen.
+    detected_lang = "en"
     existed = await pool.fetchval("SELECT 1 FROM users WHERE id=$1", tu.id)
     r = await pool.fetchrow(
         """INSERT INTO users(id,username,first_name,last_name,lang) VALUES($1,$2,$3,$4,$5)

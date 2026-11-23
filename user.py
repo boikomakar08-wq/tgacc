@@ -43,19 +43,19 @@ async def send_menu(event, user, lang):
     await show(event, "main_menu", lang, await ui.build_vars(user), await main_rows(lang))
 
 
-def language_rows():
-    return [[btn("🇷🇺 Русский", "setlang:ru"), btn("🇺🇦 Українська", "setlang:uk")],
-            [btn("🇬🇧 English", "setlang:en")],
-            [btn("🏠 Открыть главное меню", "menu")]]
+def language_rows(lang="en"):
+    return [[btn(t(lang, "btn_welcome_ru"), "setlang:ru"), btn(t(lang, "btn_welcome_uk"), "setlang:uk")],
+            [btn(t(lang, "btn_welcome_en"), "setlang:en")],
+            [btn(t(lang, "btn_open_menu"), "menu")]]
 
 
 async def send_welcome(event, user, lang, new_user=False):
     # Для нового пользователя первый экран всегда на английском.
     welcome_lang = "en" if new_user else lang
     if new_user:
-        return await show(event, "welcome", welcome_lang, await ui.build_vars(user), language_rows())
+        return await show(event, "welcome", welcome_lang, await ui.build_vars(user), language_rows(welcome_lang))
     await show(event, "welcome", welcome_lang, await ui.build_vars(user),
-               [[btn("🏠 Открыть главное меню", "menu")]])
+               [[btn(t(welcome_lang, "btn_open_menu"), "menu")]])
 
 
 @router.message(CommandStart())
@@ -73,7 +73,7 @@ async def set_language(cb: CallbackQuery, user, lang):
     user = await db.get_user(user["id"])
     await cb.answer("Язык сохранён")
     await show(cb, "welcome", new_lang, await ui.build_vars(user),
-               [[btn("🏠 Открыть главное меню", "menu")]])
+               [[btn(t(welcome_lang, "btn_open_menu"), "menu")]])
 
 
 @router.message(Command("menu"))

@@ -325,7 +325,7 @@ async def lb_section(cb: CallbackQuery):
     rows = []
     for k in keys:
         changed = any((k, lg) in texts.OVERRIDES for lg in ("all", "ru", "uk", "en"))
-        rows.append([A(("✏️ " if changed else "") + texts.t("ru", k), f"lbk:{k}")])
+        rows.append([A(("✏️ " if changed else "") + texts.t("en", k), f"lbk:{k}")])
     rows.append([A("⬅️ Назад", "lb")])
     await show_text(cb, f"{name}\nВыберите кнопку (✏️ — текст уже изменён):", rows)
 
@@ -336,7 +336,7 @@ async def lb_key(cb: CallbackQuery):
     if key not in _label_keys():
         return await cb.answer()
     await cb.answer()
-    lines = [f"Стандартно (RU): {texts.L['ru'][key]}", ""]
+    lines = [f"Стандартно (EN): {texts.L['en'][key]}", ""]
     for lg in ("all", "ru", "uk", "en"):
         v = texts.OVERRIDES.get((key, lg))
         lines.append(f"{LANG_NAMES[lg]}: {v if v else '—'}")
@@ -353,7 +353,7 @@ async def lb_edit(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     await state.set_state(BL.value)
     await state.update_data(key=key, lg=lg)
-    ph = sorted(set(re.findall(r"\{(\w+)\}", texts.L["ru"][key])))
+    ph = sorted(set(re.findall(r"\{(\w+)\}", texts.L["en"][key])))
     ph_note = f"\nМожно использовать: {', '.join('{' + p + '}' for p in ph)}" if ph else ""
     await show_text(cb, f"Отправьте новый текст кнопки ({LANG_NAMES[lg]}), до 40 символов.{ph_note}\n"
                         "Обычные emoji можно, Premium Emoji в кнопках Telegram не поддерживает.",
@@ -367,7 +367,7 @@ async def lb_value(m: Message, state: FSMContext, user):
     v = (m.text or "").strip()
     if not v or len(v) > 40:
         return await m.answer("Текст кнопки: от 1 до 40 символов.")
-    allowed = set(re.findall(r"\{(\w+)\}", texts.L["ru"][key]))
+    allowed = set(re.findall(r"\{(\w+)\}", texts.L["en"][key]))
     bad = set(re.findall(r"\{(\w+)\}", v)) - allowed
     if bad:
         return await m.answer("Недопустимые переменные: " + ", ".join(sorted(bad)))

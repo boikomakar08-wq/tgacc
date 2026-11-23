@@ -24,7 +24,7 @@ class UserMiddleware(BaseMiddleware):
             u, is_new = await db.upsert_user(tu)
             data["user"] = u
             data["is_new_user"] = is_new
-            data["lang"] = u["lang"] if u["lang"] in texts.L else "ru"
+            data["lang"] = u["lang"] if u["lang"] in texts.L else "en"
             if isinstance(event, CallbackQuery) and event.data and not event.data.startswith("a:") and event.data != "noop":
                 state = data.get("state")
                 if state:
