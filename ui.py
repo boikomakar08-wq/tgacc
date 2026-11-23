@@ -96,7 +96,7 @@ async def sample_vars(user) -> dict:
 
 
 async def get_msg(key: str, lang: str) -> dict:
-    row = await db.get_message(key)
+    row = await db.get_message(key, lang)
     if row and (row["text"] or row["photo_id"] or row["gif_id"]):
         return {"text": row["text"] or "", "entities": row["entities"], "photo_id": row["photo_id"],
                 "gif_id": row["gif_id"], "buttons": row["buttons"] or []}

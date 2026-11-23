@@ -21,8 +21,9 @@ class UserMiddleware(BaseMiddleware):
     async def __call__(self, handler, event, data):
         tu = data.get("event_from_user")
         if tu and not tu.is_bot:
-            u = await db.upsert_user(tu)
+            u, is_new = await db.upsert_user(tu)
             data["user"] = u
+            data["is_new_user"] = is_new
             data["lang"] = u["lang"] if u["lang"] in texts.L else "ru"
             if isinstance(event, CallbackQuery) and event.data and not event.data.startswith("a:") and event.data != "noop":
                 state = data.get("state")

@@ -43,11 +43,37 @@ async def send_menu(event, user, lang):
     await show(event, "main_menu", lang, await ui.build_vars(user), await main_rows(lang))
 
 
+def language_rows():
+    return [[btn("🇷🇺 Русский", "setlang:ru"), btn("🇺🇦 Українська", "setlang:uk")],
+            [btn("🇬🇧 English", "setlang:en")],
+            [btn("🏠 Открыть главное меню", "menu")]]
+
+
+async def send_welcome(event, user, lang, new_user=False):
+    # Для нового пользователя первый экран всегда на английском.
+    welcome_lang = "en" if new_user else lang
+    if new_user:
+        return await show(event, "welcome", welcome_lang, await ui.build_vars(user), language_rows())
+    await show(event, "welcome", welcome_lang, await ui.build_vars(user),
+               [[btn("🏠 Открыть главное меню", "menu")]])
+
+
 @router.message(CommandStart())
-async def start(m: Message, state: FSMContext, user, lang):
+async def start(m: Message, state: FSMContext, user, lang, is_new_user=False):
     await state.clear()
-    await show(m, "welcome", lang, await ui.build_vars(user))
-    await send_menu(m, user, lang)
+    await send_welcome(m, user, lang, is_new_user)
+
+
+@router.callback_query(F.data.startswith("setlang:"))
+async def set_language(cb: CallbackQuery, user, lang):
+    new_lang = cb.data.split(":")[1]
+    if new_lang not in LANGS:
+        return await cb.answer()
+    await db.set_lang(user["id"], new_lang)
+    user = await db.get_user(user["id"])
+    await cb.answer("Язык сохранён")
+    await show(cb, "welcome", new_lang, await ui.build_vars(user),
+               [[btn("🏠 Открыть главное меню", "menu")]])
 
 
 @router.message(Command("menu"))

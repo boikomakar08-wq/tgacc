@@ -97,46 +97,68 @@ async def msgs(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     rows = [[A(label, f"m:{key}")] for key, label in texts.MESSAGE_KEYS.items()]
     rows += [[A("🔘 Тексты кнопок", "lb")], VARS_BTN, [A("🏠 Админ-панель", "home")]]
-    await show_text(cb, "📝 СООБЩЕНИЯ\nВыберите сообщение (шаблон, меню или страницу раздела) для редактирования:", rows)
+    await show_text(cb, "📝 СООБЩЕНИЯ\nВыберите сообщение для редактирования:", rows)
 
 
 @router.callback_query(F.data.startswith("a:m:"))
-async def msg_open(cb: CallbackQuery, user):
-    key = cb.data.split(":")[2]
+async def msg_language_select(cb: CallbackQuery):
+    key = cb.data.split(":", 2)[2]
     if key not in texts.MESSAGE_KEYS:
         return await cb.answer()
     await cb.answer()
+    rows = [[A("🇷🇺 Русский", f"ml:{key}:ru")],
+            [A("🇺🇦 Українська", f"ml:{key}:uk")],
+            [A("🇬🇧 English", f"ml:{key}:en")],
+            [A("⬅️ Назад", "msgs")]]
+    await show_text(cb, f"📝 {texts.MESSAGE_KEYS[key]}\n\nВыберите язык шаблона, который хотите просмотреть или изменить:", rows)
+
+
+@router.callback_query(F.data.startswith("a:ml:"))
+async def msg_open(cb: CallbackQuery, user):
+    _, _, key, lang = cb.data.split(":")
+    if key not in texts.MESSAGE_KEYS or lang not in texts.LANGS:
+        return await cb.answer()
+    await cb.answer()
     bot, cid = await _fresh(cb)
-    custom = await db.get_message(key)
-    m = await ui.get_msg(key, "ru")
+    custom = await db.get_message(key, lang)
+    m = await ui.get_msg(key, lang)
     await ui.send_rendered(bot, cid, m, await ui.sample_vars(user))
     status = "✏️ изменено администратором" if custom else "по умолчанию"
-    rows = [[A("✏️ Изменить", f"me:{key}")], [A("♻️ Вернуть по умолчанию", f"mr:{key}")], VARS_BTN, [A("⬅️ Назад", "msgs")]]
-    await ui.send_rendered(bot, cid, {"text": f"{texts.MESSAGE_KEYS[key]}\nСтатус: {status}\n\nВыше — текущий вид (с примерными данными)."}, {}, rows)
+    rows = [[A("✏️ Изменить", f"me:{key}:{lang}")],
+            [A("♻️ Вернуть по умолчанию", f"mr:{key}:{lang}")],
+            VARS_BTN,
+            [A("🌐 Сменить язык", f"m:{key}")],
+            [A("⬅️ Назад", "msgs")]]
+    await ui.send_rendered(
+        bot, cid,
+        {"text": f"{texts.MESSAGE_KEYS[key]}\n🌐 Язык: {texts.LANGS[lang]}\nСтатус: {status}\n\nВыше — текущий вид (с примерными данными)."},
+        {}, rows)
 
 
 @router.callback_query(F.data.startswith("a:mr:"))
 async def msg_reset(cb: CallbackQuery, user):
-    key = cb.data.split(":")[2]
-    if key in texts.MESSAGE_KEYS:
-        await db.reset_message(key)
-        await db.log(user["id"], "message_reset", key=key)
+    _, _, key, lang = cb.data.split(":")
+    if key in texts.MESSAGE_KEYS and lang in texts.LANGS:
+        await db.reset_message(key, lang)
+        await db.log(user["id"], "message_reset", key=key, lang=lang)
     await cb.answer("♻️ Сброшено")
-    await show_text(cb, "♻️ Сообщение возвращено к значению по умолчанию.", [[A("📝 Сообщения", "msgs")]])
+    await show_text(cb, "♻️ Шаблон выбранного языка возвращён к значению по умолчанию.",
+                    [[A("🌐 Выбрать язык", f"m:{key}")], [A("📝 Сообщения", "msgs")]])
 
 
 @router.callback_query(F.data.startswith("a:me:"))
 async def msg_edit(cb: CallbackQuery, state: FSMContext):
-    key = cb.data.split(":")[2]
-    if key not in texts.MESSAGE_KEYS:
+    _, _, key, lang = cb.data.split(":")
+    if key not in texts.MESSAGE_KEYS or lang not in texts.LANGS:
         return await cb.answer()
     await cb.answer()
     await state.clear()
     await state.set_state(ME.content)
-    await state.update_data(key=key)
-    await show_text(cb, f"✏️ {texts.MESSAGE_KEYS[key]}\n\nОтправьте новое сообщение: текст, фото или GIF с подписью. "
+    await state.update_data(key=key, lang=lang)
+    await show_text(cb, f"✏️ {texts.MESSAGE_KEYS[key]}\n🌐 Язык: {texts.LANGS[lang]}\n\n"
+                        "Отправьте новое сообщение: текст, фото или GIF с подписью. "
                         "Premium Emoji, форматирование и переменные сохранятся как есть.",
-                    [VARS_BTN, [A("❌ Отмена", "msgs")]])
+                    [VARS_BTN, [A("❌ Отмена", f"ml:{key}:{lang}")]])
 
 
 @router.message(ME.content)
@@ -153,8 +175,12 @@ async def _msg_preview(event, state, user):
     d = await state.get_data()
     bot, cid = await _fresh(event)
     await ui.send_rendered(bot, cid, d["draft"], await ui.sample_vars(user))
-    rows = [[A("👁️ Предпросмотр", "mp")], [A("💾 Сохранить", "ms"), A("✏️ Изменить", f"me:{d['key']}")], [A("❌ Отмена", "msgs")]]
-    await ui.send_rendered(bot, cid, {"text": f"👁️ Предпросмотр: {texts.MESSAGE_KEYS[d['key']]}"}, {}, rows)
+    rows = [[A("👁️ Предпросмотр", "mp")],
+            [A("💾 Сохранить", "ms"), A("✏️ Изменить", f"me:{d['key']}:{d['lang']}")],
+            [A("❌ Отмена", f"ml:{d['key']}:{d['lang']}")]]
+    await ui.send_rendered(
+        bot, cid,
+        {"text": f"👁️ Предпросмотр: {texts.MESSAGE_KEYS[d['key']]}\n🌐 Язык: {texts.LANGS[d['lang']]}"}, {}, rows)
 
 
 @router.message(ME.buttons)
@@ -186,13 +212,14 @@ async def msg_preview_again(cb: CallbackQuery, state: FSMContext, user):
 @router.callback_query(F.data == "a:ms")
 async def msg_save(cb: CallbackQuery, state: FSMContext, user):
     d = await state.get_data()
-    if "draft" not in d or "key" not in d:
+    if "draft" not in d or "key" not in d or "lang" not in d:
         return await cb.answer("Нет черновика", show_alert=True)
-    await db.save_message(d["key"], d["draft"])
-    await db.log(user["id"], "message_save", key=d["key"])
+    await db.save_message(d["key"], d["lang"], d["draft"])
+    await db.log(user["id"], "message_save", key=d["key"], lang=d["lang"])
     await state.clear()
     await cb.answer("💾 Сохранено")
-    await show_text(cb, "✅ Сообщение сохранено.", [[A("📝 Сообщения", "msgs")], [A("🏠 Админ-панель", "home")]])
+    await show_text(cb, "✅ Сообщение сохранено для выбранного языка.",
+                    [[A("📝 Сообщения", "msgs")], [A("🏠 Админ-панель", "home")]])
 
 
 # ───────────────────────── /bd — массовая рассылка ─────────────────────────

@@ -100,13 +100,15 @@ CREATE TABLE IF NOT EXISTS promo_uses (
 );
 
 CREATE TABLE IF NOT EXISTS messages (
-    key        TEXT PRIMARY KEY,
+    key        TEXT NOT NULL,
+    lang       TEXT NOT NULL DEFAULT 'ru',
     text       TEXT,
     entities   JSONB,
     photo_id   TEXT,
     gif_id     TEXT,
     buttons    JSONB,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (key, lang)
 );
 
 CREATE TABLE IF NOT EXISTS broadcasts (

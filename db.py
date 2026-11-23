@@ -40,6 +40,14 @@ async def init():
     pool = await asyncpg.create_pool(config.DATABASE_URL, min_size=2, max_size=15, init=_init_conn)
     async with pool.acquire() as c:
         await c.execute(pathlib.Path(__file__).with_name("schema.sql").read_text("utf-8"))
+        # Миграция старой таблицы messages (где ключ был уникальным без языка).
+        cols = await c.fetch(
+            "SELECT column_name FROM information_schema.columns WHERE table_name='messages' AND table_schema='public'")
+        colnames = {r["column_name"] for r in cols}
+        if "lang" not in colnames:
+            await c.execute("ALTER TABLE messages ADD COLUMN lang TEXT NOT NULL DEFAULT 'ru'")
+        await c.execute("ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_pkey")
+        await c.execute("ALTER TABLE messages ADD CONSTRAINT messages_pkey PRIMARY KEY (key, lang)")
         for k, v in SETTING_DEFAULTS.items():
             await c.execute("INSERT INTO settings(key,value) VALUES($1,$2) ON CONFLICT DO NOTHING", k, v)
 
@@ -67,19 +75,23 @@ async def set_setting(key: str, value: str):
     _cache = None
 
 
-async def get_message(key):
-    return _d(await pool.fetchrow("SELECT * FROM messages WHERE key=$1", key))
+async def get_message(key, lang="ru"):
+    return _d(await pool.fetchrow("SELECT * FROM messages WHERE key=$1 AND lang=$2", key, lang))
 
 
-async def save_message(key, d):
+async def save_message(key, lang, d):
     await pool.execute(
-        """INSERT INTO messages(key,text,entities,photo_id,gif_id,buttons,updated_at) VALUES($1,$2,$3,$4,$5,$6,now())
-           ON CONFLICT(key) DO UPDATE SET text=$2,entities=$3,photo_id=$4,gif_id=$5,buttons=$6,updated_at=now()""",
-        key, d.get("text"), d.get("entities") or [], d.get("photo_id"), d.get("gif_id"), d.get("buttons") or [])
+        """INSERT INTO messages(key,lang,text,entities,photo_id,gif_id,buttons,updated_at)
+           VALUES($1,$2,$3,$4,$5,$6,$7,now())
+           ON CONFLICT(key,lang) DO UPDATE SET text=$3,entities=$4,photo_id=$5,gif_id=$6,buttons=$7,updated_at=now()""",
+        key, lang, d.get("text"), d.get("entities") or [], d.get("photo_id"), d.get("gif_id"), d.get("buttons") or [])
 
 
-async def reset_message(key):
-    await pool.execute("DELETE FROM messages WHERE key=$1", key)
+async def reset_message(key, lang=None):
+    if lang:
+        await pool.execute("DELETE FROM messages WHERE key=$1 AND lang=$2", key, lang)
+    else:
+        await pool.execute("DELETE FROM messages WHERE key=$1", key)
 
 
 async def refresh_labels():
@@ -104,15 +116,16 @@ async def log(admin_id: int, action: str, **details):
 
 
 # ───────────────────────── пользователи ─────────────────────────
-async def upsert_user(tu) -> dict:
+async def upsert_user(tu) -> tuple[dict, bool]:
     code = (tu.language_code or "ru")[:2]
-    lang = code if code in ("ru", "uk", "en") else "ru"
+    detected_lang = code if code in ("ru", "uk", "en") else "ru"
+    existed = await pool.fetchval("SELECT 1 FROM users WHERE id=$1", tu.id)
     r = await pool.fetchrow(
         """INSERT INTO users(id,username,first_name,last_name,lang) VALUES($1,$2,$3,$4,$5)
            ON CONFLICT(id) DO UPDATE SET username=EXCLUDED.username, first_name=EXCLUDED.first_name,
                last_name=EXCLUDED.last_name, is_blocked=FALSE
-           RETURNING *""", tu.id, tu.username, tu.first_name, tu.last_name, lang)
-    return dict(r)
+           RETURNING *""", tu.id, tu.username, tu.first_name, tu.last_name, detected_lang)
+    return dict(r), not bool(existed)
 
 
 async def get_user(uid):
